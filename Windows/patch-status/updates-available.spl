@@ -1,0 +1,13 @@
+index=windows eventtype="Update_*" package=* host=* earliest=-30d@d
+| mvexpand package_title
+| dedup package_title,host
+| rex field=package_title "(?<package_rex>(?<=\()[^)]*(?=\)))"
+| where package == package_rex
+| eval format_time = strftime(_time,"%d/%m/%Y %H:%M.%S %p")
+| eval patch_status = if(eventtype="Update_Successful","Update Successful",if(eventtype="Update_Failed","Update Failed",if(eventtype="Update_Pending_Reboot","Pending Reboot", "Update Available")))
+| search patch_status = "Update Available"
+| rename package_rex as package
+| table format_time, host, package, package_title, patch_status
+| eval host=upper(host)
+| sort host
+| rename format_time as "Date/Time", host as "Hostname", package_title as "Package Title", package as "Package Number",patch_status as "Patch Status"
